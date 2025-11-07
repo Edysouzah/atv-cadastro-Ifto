@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Pessoas IFTO (OO)</title>
+    <!-- Carregando Tailwind CSS para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Definindo a fonte Inter (padrão do Tailwind) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f9;
+        }
+        .ifto-color {
+            /* Novo tom de Verde (Dark Emerald) - Cor principal */
+            background-color: #047857; 
+        }
+        .ifto-text {
+            /* Novo tom de Verde - Cor de destaque de texto */
+            color: #047857;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-6 md:p-10">
+        
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-3xl font-extrabold ifto-text">
+                Sistema de Cadastro IFTO
+            </h1>
+            <p class="text-gray-500">Cadastro de Estudantes, Servidores, Professores e Visitantes.</p>
+        </header>
+
+        <!-- Seção de Cadastro -->
+        <section class="mb-12 bg-gray-50 p-6 rounded-xl border border-gray-200">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">1. Cadastro de Nova Pessoa</h2>
+            
+            <form id="cadastroForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Campo Tipo de Pessoa (Mandatório) -->
+                <div class="md:col-span-2">
+                    <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Pessoa</label>
+                    <!-- Alterando foco para um verde padrão Tailwind para compatibilidade com CDN -->
+                    <select id="tipo" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-600 focus:border-green-600 transition duration-150">
+                        <option value="" disabled selected>Selecione o tipo...</option>
+                        <option value="Servidor">Servidor (Técnico/Administrativo)</option>
+                        <option value="Professor">Professor</option>
+                        <option value="Estudante">Estudante</option>
+                        <option value="Visitante">Visitante</option>
+                    </select>
+                </div>
+
+                <!-- Campos Básicos -->
+                <div>
+                    <label for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                    <input type="text" id="nome" required class="w-full p-3 border border-gray-300 rounded-lg" placeholder="João da Silva">
+                </div>
+                <div>
+                    <label for="cpf" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                    <input type="text" id="cpf" required class="w-full p-3 border border-gray-300 rounded-lg" placeholder="000.000.000-00">
+                </div>
+
+                <!-- Campos Condicionais (Renderizados via JS) -->
+                <div id="camposCondicionais" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Conteúdo condicional de Curso, Função e Salário será inserido aqui -->
+                </div>
+
+                <!-- Botão de Cadastro -->
+                <div class="md:col-span-2 mt-4">
+                    <!-- Botão com cor principal Verde e hover Vermelho -->
+                    <button type="submit" class="w-full ifto-color text-white font-bold py-3 px-6 rounded-xl hover:bg-red-700 transition duration-300 shadow-md transform hover:scale-[1.01] active:scale-[0.99]">
+                        Cadastrar Pessoa
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Seção de Lista de Pessoas Cadastradas -->
+        <section>
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">2. Pessoas Cadastradas (<span id="totalPessoas">0</span>)</h2>
+            
+            <div class="overflow-x-auto shadow-lg rounded-xl">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="ifto-color text-white">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tl-xl">Tipo</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Nome (CPF)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Detalhe Principal</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tr-xl">Data Cadastro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaPessoas" class="bg-white divide-y divide-gray-200">
+                        <!-- Linhas da tabela serão inseridas aqui -->
+                        <tr id="avisoVazio" class="bg-gray-50">
+                            <td colspan="4" class="px-4 py-4 text-center text-gray-500 italic">Nenhuma pessoa cadastrada ainda.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Variável GLOBAL para simular o banco de dados
+        // IMPORTANTE: O nome da variável segue a especificação do usuário.
+        let $pessoaIFTO = []; 
+
+        /**
+         * ===================================================================
+         * 1. CLASSES E ALGORITMO ORIENTADO A OBJETOS
+         * ===================================================================
+         */
+
+        /**
+         * Classe Base: Pessoa
+         * Contém atributos comuns a todas as pessoas no sistema.
+         */
+        class Pessoa {
+            constructor(nome, cpf) {
+                // Atributos base
+                this.nome = nome;
+                this.cpf = cpf;
+                this.dataCadastro = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            }
+
+            // Método genérico para obter o detalhe principal (usado na listagem)
+            getDetalhePrincipal() {
+                return 'N/A';
+            }
+
+            // Método genérico para obter o tipo da classe (usado na listagem)
+            getTipo() {
+                return 'Pessoa Desconhecida';
+            }
+        }
+
+        /**
+         * Classe Visitante
+         * Herda de Pessoa. Não possui atributos extras (função, salário ou curso).
+         */
+        class Visitante extends Pessoa {
+            constructor(nome, cpf) {
+                super(nome, cpf);
+                this.classeTipo = 'Visitante';
+            }
+
+            getTipo() {
+                return 'Visitante';
+            }
+
+            getDetalhePrincipal() {
+                return 'Acesso de Curta Duração';
+            }
+        }
+
+        /**
+         * Classe Estudante
+         * Herda de Pessoa. Possui o atributo 'curso'.
+         */
+        class Estudante extends Pessoa {
+            constructor(nome, cpf, curso) {
+                super(nome, cpf);
+                this.curso = curso;
+                this.classeTipo = 'Estudante';
+            }
+
+            getTipo() {
+                return 'Estudante';
+            }
+
+            getDetalhePrincipal() {
+                return `Curso: ${this.curso}`;
+            }
+        }
+
+        /**
+         * Classe Base para Servidores (Inclui Professores)
+         * Herda de Pessoa. Possui atributos 'funcao' e 'salario'.
+         * Esta classe é a base para Professor e Servidor Técnico.
+         */
+        class ServidorBase extends Pessoa {
+            constructor(nome, cpf, funcao, salario) {
+                super(nome, cpf);
+                this.funcao = funcao;
+                // O salário é armazenado como string para simplificar a demo, mas idealmente seria number/decimal
+                this.salario = parseFloat(salario).toLocaleString('pt-BR', { 
+                    style: 'currency', 
+                    currency: 'BRL' 
+                });
+            }
+
+            getDetalhePrincipal() {
+                return `Função: ${this.funcao}`;
+            }
+        }
+
+        /**
+         * Classe Servidor (Técnico/Administrativo)
+         * Herda de ServidorBase.
+         */
+        class Servidor extends ServidorBase {
+            constructor(nome, cpf, funcao, salario) {
+                // A função pode ser preenchida manualmente, mas o tipo é fixo
+                super(nome, cpf, funcao, salario);
+                this.classeTipo = 'Servidor';
+            }
+
+            getTipo() {
+                return 'Servidor (Téc.)';
+            }
+        }
+
+        /**
+         * Classe Professor
+         * Herda de ServidorBase.
+         */
+        class Professor extends ServidorBase {
+            constructor(nome, cpf, funcao, salario) {
+                // A função normalmente seria "Professor", mas pode ter especialidade
+                super(nome, cpf, funcao, salario);
+                this.classeTipo = 'Professor';
+            }
+
+            getTipo() {
+                return 'Professor';
+            }
+        }
+
+
+        /**
+         * ===================================================================
+         * 2. LÓGICA DA INTERFACE (DOM e Eventos)
+         * ===================================================================
+         */
+
+        const cadastroForm = document.getElementById('cadastroForm');
+        const tipoSelect = document.getElementById('tipo');
+        const camposCondicionaisDiv = document.getElementById('camposCondicionais');
+        const listaPessoasBody = document.getElementById('listaPessoas');
+        const avisoVazioRow = document.getElementById('avisoVazio');
+        const totalPessoasSpan = document.getElementById('totalPessoas');
+
+        // Função para formatar CPF (apenas para exibição)
+        function formatarCPF(cpf) {
+            if (!cpf) return '';
+            // Remove tudo que não for dígito
+            const cleaned = ('' + cpf).replace(/\D/g, '');
+            // Aplica a máscara
+            const match = cleaned.match(/^(\d{3})(\d{3})(\d{3})(\d{2})$/);
+            if (match) {
+                return match[1] + '.' + match[2] + '.' + match[3] + '-' + match[4];
+            }
+            return cpf;
+        }
+
+        // Função para renderizar os campos condicionais
+        function renderizarCamposCondicionais() {
+            const tipo = tipoSelect.value;
+            camposCondicionaisDiv.innerHTML = '';
+
+            let html = '';
+
+            // Campos para Servidor/Professor
+            if (tipo === 'Servidor' || tipo === 'Professor') {
+                html += `
+                    <div>
+                        <label for="funcao" class="block text-sm font-medium text-gray-700 mb-1">Função/Cargo</label>
+                        <input type="text" id="funcao" required class="w-full p-3 border border-gray-300 rounded-lg" placeholder="${tipo === 'Professor' ? 'Ex: Professor de Matemática' : 'Ex: Técnico Administrativo'}">
+                    </div>
+                    <div>
+                        <label for="salario" class="block text-sm font-medium text-gray-700 mb-1">Salário (R$)</label>
+                        <input type="number" step="0.01" id="salario" required class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ex: 5000.00">
+                    </div>
+                `;
+            } 
+            // Campos para Estudante
+            else if (tipo === 'Estudante') {
+                html += `
+                    <div class="md:col-span-2">
+                        <label for="curso" class="block text-sm font-medium text-gray-700 mb-1">Curso Vinculado</label>
+                        <input type="text" id="curso" required class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ex: Bacharelado em Sistemas de Informação">
+                    </div>
+                `;
+            }
+            // Visitante não precisa de campos extras
+            
+            camposCondicionaisDiv.innerHTML = html;
+        }
+
+        // Evento para atualizar campos condicionais ao mudar o tipo
+        tipoSelect.addEventListener('change', renderizarCamposCondicionais);
+
+        // Função para renderizar a lista de pessoas
+        function renderizarListaPessoas() {
+            listaPessoasBody.innerHTML = '';
+            totalPessoasSpan.textContent = $pessoaIFTO.length;
+
+            if ($pessoaIFTO.length === 0) {
+                listaPessoasBody.appendChild(avisoVazioRow);
+                return;
+            }
+
+            $pessoaIFTO.forEach(pessoa => {
+                const tr = document.createElement('tr');
+                tr.classList.add('hover:bg-green-50', 'transition', 'duration-150');
+
+                // Cor de fundo levemente diferente para Servidores/Professores
+                let typeColor = 'bg-white';
+                if (pessoa instanceof ServidorBase) {
+                    typeColor = 'bg-yellow-50';
+                } else if (pessoa instanceof Estudante) {
+                    typeColor = 'bg-green-50';
+                }
+
+                tr.classList.add(typeColor);
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${pessoa.getTipo()}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${pessoa.nome} (${formatarCPF(pessoa.cpf)})</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${pessoa.getDetalhePrincipal()}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${pessoa.dataCadastro}</td>
+                `;
+                listaPessoasBody.appendChild(tr);
+            });
+        }
+
+        // Função principal de submissão do formulário
+        cadastroForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const tipo = tipoSelect.value;
+            const nome = document.getElementById('nome').value.trim();
+            const cpf = document.getElementById('cpf').value.trim().replace(/\D/g, ''); // Limpa o CPF
+
+            if (!tipo) {
+                alertUser('Selecione um tipo de pessoa!', 'red');
+                return;
+            }
+
+            let novaPessoa;
+
+            try {
+                // Instanciação da classe correta baseada no tipo selecionado
+                switch (tipo) {
+                    case 'Visitante':
+                        novaPessoa = new Visitante(nome, cpf);
+                        break;
+                    case 'Estudante':
+                        const curso = document.getElementById('curso').value.trim();
+                        if (!curso) throw new Error("O campo 'Curso' é obrigatório para Estudantes.");
+                        novaPessoa = new Estudante(nome, cpf, curso);
+                        break;
+                    case 'Servidor':
+                    case 'Professor':
+                        const funcao = document.getElementById('funcao').value.trim();
+                        const salario = document.getElementById('salario').value.trim();
+
+                        if (!funcao) throw new Error("O campo 'Função/Cargo' é obrigatório.");
+                        if (!salario || isNaN(parseFloat(salario))) throw new Error("O campo 'Salário' é obrigatório e deve ser um número válido.");
+
+                        if (tipo === 'Servidor') {
+                            novaPessoa = new Servidor(nome, cpf, funcao, salario);
+                        } else {
+                            novaPessoa = new Professor(nome, cpf, funcao, salario);
+                        }
+                        break;
+                    default:
+                        throw new Error("Tipo de pessoa inválido selecionado.");
+                }
+
+                // Adicionar a nova instância ao array (simulando o INSERT no DB)
+                $pessoaIFTO.push(novaPessoa);
+
+                // Limpar formulário e re-renderizar a lista
+                cadastroForm.reset();
+                camposCondicionaisDiv.innerHTML = '';
+                renderizarListaPessoas();
+                alertUser(`Pessoa "${novaPessoa.nome}" cadastrada com sucesso como ${novaPessoa.getTipo()}!`, 'green');
+
+            } catch (error) {
+                console.error("Erro no cadastro:", error);
+                alertUser(`Erro no cadastro: ${error.message}`, 'red');
+            }
+        });
+
+        // Função para mostrar mensagens (simulando um modal/toast, já que alert() é proibido)
+        function alertUser(message, type) {
+            let alertBox = document.getElementById('customAlert');
+            if (!alertBox) {
+                alertBox = document.createElement('div');
+                alertBox.id = 'customAlert';
+                alertBox.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-xl text-white font-semibold z-50 transition-transform duration-300 transform translate-x-full';
+                document.body.appendChild(alertBox);
+            }
+
+            alertBox.textContent = message;
+            alertBox.classList.remove('bg-green-600', 'bg-red-600', 'translate-x-0');
+            alertBox.classList.add(type === 'green' ? 'bg-green-600' : 'bg-red-600');
+            
+            // Mostrar
+            setTimeout(() => {
+                alertBox.classList.add('translate-x-0');
+            }, 50);
+
+            // Esconder após 4 segundos
+            setTimeout(() => {
+                alertBox.classList.remove('translate-x-0');
+                alertBox.classList.add('translate-x-full');
+            }, 4000);
+        }
+        
+        // Inicialização: Renderiza a lista vazia ao carregar a página
+        window.onload = renderizarListaPessoas;
+
+    </script>
+</body>
+</html>
